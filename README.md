@@ -2,6 +2,10 @@
 
 **Stream Deck + Home Assistant + MQTT + a quiet in-game message overlay.**
 
+[![Watch the rig demo: a message received and cleared](docs/images/demo-preview.jpg)](docs/images/simrig-demo-silent.mp4)
+
+**[▶ Watch the 13-second demo](docs/images/simrig-demo-silent.mp4)** — silent footage from the rig, showing a message received and cleared with the Stream Deck.
+
 I wanted a way to tell my wife whether I was available while racing, and a way for her to reach me without a shout across the house or a distracting phone notification. A couple of buttons on my Stream Deck turned out to be enough.
 
 I already had Home Assistant, Mosquitto, Caddy, and Edge Overlays running for other reasons. This connects those pieces. It's a description of what I did, with the code and examples in case someone else wants to try it—not a claim that this is the best or most efficient solution.
