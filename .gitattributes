@@ -1,0 +1,2 @@
+# Preserve the vendored MQTT browser bundle byte-for-byte.
+overlay/vendor/mqtt.min.js -text
