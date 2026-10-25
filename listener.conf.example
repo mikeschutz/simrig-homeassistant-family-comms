@@ -1,0 +1,13 @@
+# Fragment for Mosquitto 2.0.x, not a complete replacement configuration.
+# Preserve existing listeners and authentication. Change paths for your host.
+# Assumes global authentication (per_listener_settings remains false).
+allow_anonymous false
+password_file /mosquitto/config/passwordfile
+acl_file /mosquitto/config/acl
+
+# Add only if a WebSocket listener is not already configured.
+listener 9001 0.0.0.0
+protocol websockets
+
+# Caddy must be able to reach this listener. No Docker host port publication
+# is needed when Caddy and the broker share a suitable internal network.

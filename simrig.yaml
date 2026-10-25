@@ -1,0 +1,278 @@
+# Install as /config/packages/simrig.yaml in Home Assistant.
+# Uses the existing MQTT integration; no broker credentials belong in this file.
+input_select:
+  simrig_status:
+    name: Sim Rig Status
+    icon: mdi:car-seat
+    options:
+      - Out of rig
+      - Available
+      - Racing
+  simrig_message_priority:
+    name: Message priority
+    icon: mdi:message-alert-outline
+    options:
+      - Normal
+      - Urgent
+
+input_text:
+  simrig_message_draft:
+    name: Short message
+    max: 180
+    icon: mdi:message-text-outline
+  simrig_current_message:
+    name: Current rig message
+    max: 180
+  simrig_message_id:
+    name: Rig message ID
+    max: 64
+  simrig_current_priority:
+    name: Current rig message priority
+    max: 16
+  simrig_last_reply:
+    name: Last rig reply
+    max: 160
+
+input_boolean:
+  simrig_message_pending:
+    name: Rig message awaiting acknowledgement
+    icon: mdi:email-alert-outline
+
+timer:
+  simrig_heartbeat:
+    name: Rig check-in timeout
+    duration: "00:01:30"
+    restore: false
+
+script:
+  simrig_control:
+    alias: "Sim rig - internal controller"
+    description: Serializes message changes and rejects acknowledgements for old messages.
+    mode: queued
+    max: 20
+    fields:
+      operation:
+        required: true
+        selector:
+          text:
+      message_id:
+        selector:
+          text:
+    sequence:
+      - variables:
+          op: "{{ operation | default('publish') }}"
+          incoming_id: "{{ message_id | default('') | string }}"
+          draft: "{{ states('input_text.simrig_message_draft') | trim }}"
+      - choose:
+          - conditions: "{{ op == 'cycle_status' }}"
+            sequence:
+              - action: input_select.select_next
+                target:
+                  entity_id: input_select.simrig_status
+                data:
+                  cycle: true
+          - conditions: "{{ op == 'send' }}"
+            sequence:
+              - condition: template
+                value_template: "{{ draft not in ['', 'unknown', 'unavailable'] }}"
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_current_message
+                data:
+                  value: "{{ draft }}"
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_message_id
+                data:
+                  value: "{{ now().strftime('%Y%m%dT%H%M%S%f') }}"
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_current_priority
+                data:
+                  value: "{{ states('input_select.simrig_message_priority') | lower }}"
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_last_reply
+                data:
+                  value: Awaiting acknowledgement.
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.simrig_message_pending
+          - conditions: "{{ op in ['ack', 'coming_shortly'] }}"
+            sequence:
+              - condition: template
+                value_template: >-
+                  {{ is_state('input_boolean.simrig_message_pending', 'on')
+                     and incoming_id != ''
+                     and incoming_id == states('input_text.simrig_message_id') }}
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_last_reply
+                data:
+                  value: >-
+                    {{ 'Coming shortly.' if op == 'coming_shortly'
+                       else 'Acknowledged — I will respond when I can.' }}
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.simrig_message_pending
+          - conditions: "{{ op == 'clear' }}"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.simrig_message_pending
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.simrig_last_reply
+                data:
+                  value: Message cancelled.
+          - conditions: "{{ op == 'offline' }}"
+            sequence:
+              # A new heartbeat may have arrived while this operation queued.
+              - condition: state
+                entity_id: timer.simrig_heartbeat
+                state: idle
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.simrig_status
+                data:
+                  option: Out of rig
+      # No active message remains after cancellation or a matching reply.
+      - if:
+          - condition: state
+            entity_id: input_boolean.simrig_message_pending
+            state: "off"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id:
+                - input_text.simrig_current_message
+                - input_text.simrig_message_id
+            data:
+              value: ""
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.simrig_current_priority
+            data:
+              value: normal
+      - action: mqtt.publish
+        data:
+          topic: simrig/state
+          qos: 1
+          retain: true
+          payload: >-
+            {% set options = ['Out of rig', 'Available', 'Racing'] %}
+            {% set status = states('input_select.simrig_status') %}
+            {{ options.index(status) if status in options else 0 }}
+      - action: mqtt.publish
+        data:
+          topic: simrig/message
+          qos: 1
+          retain: true
+          payload: >-
+            {{ dict(
+              id=states('input_text.simrig_message_id'),
+              text=states('input_text.simrig_current_message'),
+              priority=states('input_text.simrig_current_priority') if
+                states('input_text.simrig_current_priority') in ['normal', 'urgent'] else 'normal',
+              pending=is_state('input_boolean.simrig_message_pending', 'on'),
+              reply=states('input_text.simrig_last_reply')
+            ) | to_json }}
+      # Clear the sent draft only after both MQTT publishes succeed.
+      # Preserve any different text typed while the message was being sent.
+      - if: "{{ op == 'send' and states('input_text.simrig_message_draft') | trim == draft }}"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: input_text.simrig_message_draft
+            data:
+              value: ""
+
+  simrig_send_message:
+    alias: "Sim rig - send message"
+    icon: mdi:send
+    sequence:
+      - action: script.simrig_control
+        data:
+          operation: send
+
+  simrig_clear_message:
+    alias: "Sim rig - clear pending message"
+    icon: mdi:email-check-outline
+    sequence:
+      - action: script.simrig_control
+        data:
+          operation: clear
+
+automation:
+  - id: simrig_publish_on_start_status_or_mqtt_reload
+    alias: "Sim rig - synchronize confirmed state"
+    mode: queued
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_select.simrig_status
+      - trigger: event
+        event_type: event_mqtt_reloaded
+      - trigger: mqtt
+        topic: homeassistant/status
+        payload: online
+    actions:
+      # Selecting an in-rig status arms the timeout even before the first
+      # heartbeat. Later, Companion refreshes it independently every 30 seconds.
+      - if: >-
+          {{ trigger.platform == 'state'
+             and states('input_select.simrig_status') in ['Available', 'Racing'] }}
+        then:
+          - action: timer.start
+            target:
+              entity_id: timer.simrig_heartbeat
+      - action: script.simrig_control
+        data:
+          operation: publish
+
+  - id: simrig_handle_mqtt_command
+    alias: "Sim rig - receive Deck commands"
+    mode: queued
+    triggers:
+      - trigger: mqtt
+        topic: simrig/command
+    actions:
+      - variables:
+          command_data: "{{ trigger.payload | from_json({}) }}"
+      - condition: template
+        value_template: >-
+          {{ command_data is mapping
+             and command_data.get('command', '') in
+               ['test', 'cycle_status', 'ack', 'coming_shortly'] }}
+      - action: script.simrig_control
+        data:
+          operation: "{{ 'publish' if command_data.get('command') == 'test' else command_data.get('command') }}"
+          message_id: "{{ command_data.get('message_id', '') }}"
+
+  - id: simrig_refresh_heartbeat
+    alias: "Sim rig - receive check-in"
+    mode: restart
+    triggers:
+      - trigger: mqtt
+        topic: simrig/heartbeat
+        payload: online
+    actions:
+      - action: timer.start
+        target:
+          entity_id: timer.simrig_heartbeat
+
+  - id: simrig_offline_timeout
+    alias: "Sim rig - reset availability when offline"
+    mode: queued
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.simrig_heartbeat
+      - trigger: homeassistant
+        event: start
+    actions:
+      - action: script.simrig_control
+        data:
+          operation: offline

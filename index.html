@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Rig messages</title>
+  <link rel="stylesheet" href="./overlay.css">
+  <script defer src="./vendor/mqtt.min.js"></script>
+  <script defer src="./model.js"></script>
+  <script defer src="./overlay.js"></script>
+</head>
+<body>
+  <main>
+    <section id="message" class="message" aria-live="polite" aria-atomic="true" hidden>
+      <div class="message-top"><span id="priority">HOME MESSAGE</span><span id="age"></span></div>
+      <p id="message-text"></p>
+      <div class="message-bottom"><span>Tap Deck: seen</span><span>Hold: coming shortly</span></div>
+      <div id="stale-note" class="stale" hidden>Connection lost — this message may have been cleared.</div>
+    </section>
+    <section id="health" class="health" role="status"><span class="dot"></span><span id="health-text">Connecting…</span></section>
+    <button id="open-settings" class="settings-toggle" aria-label="Connection settings" title="Connection settings">⚙</button>
+    <section id="settings" class="settings" hidden aria-labelledby="settings-title">
+      <div class="settings-heading"><span class="eyebrow">SIM RIG</span><button id="close-settings" aria-label="Close settings">×</button></div>
+      <h1 id="settings-title">Messages, quietly.</h1>
+      <p class="intro">Connect once. Reply with your Stream Deck.</p>
+      <form id="connect-form">
+        <label for="broker">Secure MQTT address</label>
+        <input id="broker" type="url" required spellcheck="false" placeholder="wss://rig-messages.example.com/mqtt">
+        <label for="username">Read-only username</label>
+        <input id="username" autocomplete="username" required value="simrig_overlay" spellcheck="false">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+        <label class="checkbox"><input id="remember" type="checkbox"> Remember on this browser profile</label>
+        <p class="hint">Uses a read-only MQTT account. No Home Assistant token is needed.</p>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <button class="connect-button" type="submit">Connect messages <span>→</span></button>
+      </form>
+      <div class="settings-footer"><button id="preview-normal">Preview normal</button><button id="preview-urgent">Preview urgent</button><button id="forget">Forget login</button></div>
+    </section>
+  </main>
+</body>
+</html>

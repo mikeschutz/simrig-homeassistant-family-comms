@@ -1,0 +1,17 @@
+# Merge into your existing Mosquitto 2.0.x ACL file.
+# Keep HA's existing access and every other existing client's permissions.
+# The usernames below must match the accounts you create.
+
+user simrig
+topic write simrig/command
+topic write simrig/heartbeat
+topic read simrig/state
+topic read simrig/message
+
+user simrig_overlay
+topic read simrig/message
+
+# HA's account needs read simrig/command and simrig/heartbeat,
+# and write simrig/state and simrig/message (including retained publishes).
+# It also needs its normal MQTT integration/birth/discovery permissions.
+# Do not replace an existing HA ACL with only these project topics.

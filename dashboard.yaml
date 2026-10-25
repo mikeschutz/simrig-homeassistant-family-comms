@@ -1,0 +1,90 @@
+# Complete configuration for a NEW empty dashboard.
+# To add only a view to an existing YAML dashboard, append views[0] instead.
+title: Sim Rig
+views:
+  - title: Sim Rig
+    path: sim-rig
+    icon: mdi:steering
+    type: masonry
+    cards:
+      - type: markdown
+        title: Rig availability
+        content: >-
+          {% set status = states('input_select.simrig_status') %}
+          {% if status == 'Racing' %}
+          ## 🔴 Racing
+
+          Concentrating. Please interrupt only for something urgent.
+          {% elif status == 'Available' %}
+          ## 🟢 Available
+
+          At the simulator. Okay to interrupt; replies may take a moment.
+          {% else %}
+          ## ⚪ Out of rig
+
+          Not at the simulator. Contact me normally.
+          {% endif %}
+
+          *When the rig stops checking in, availability resets automatically
+          within 90 seconds.*
+
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: Send a message
+            show_header_toggle: false
+            entities:
+              - entity: input_text.simrig_message_draft
+                name: Message (up to 180 characters)
+              - entity: input_select.simrig_message_priority
+                name: Priority
+          - type: markdown
+            content: >-
+              Normal messages are intended for a quiet notification.
+              Urgent messages request more attention, regardless of availability.
+
+              Sending again replaces the current message and clears the draft.
+              Acknowledgement is shown below when it arrives.
+          - type: button
+            name: Send message
+            icon: mdi:send
+            tap_action:
+              action: perform-action
+              perform_action: script.simrig_send_message
+            hold_action:
+              action: none
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            title: Message and response
+            content: >-
+              {% set message = states('input_text.simrig_current_message') %}
+              {% set reply = states('input_text.simrig_last_reply') %}
+              {% if is_state('input_boolean.simrig_message_pending', 'on') %}
+              **Message:** {{ message }}
+
+              **Awaiting acknowledgement.** This does not confirm delivery to the rig.
+              {% else %}
+              No active message.
+              {% endif %}
+
+              {% if reply not in ['', 'unknown', 'unavailable'] %}
+              **Last response:** {{ reply }}
+              {% endif %}
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_boolean.simrig_message_pending
+                state: "on"
+            card:
+              type: button
+              name: Clear message
+              icon: mdi:email-remove-outline
+              tap_action:
+                action: perform-action
+                perform_action: script.simrig_clear_message
+                confirmation:
+                  text: Cancel this message and remove it from the rig display?
+              hold_action:
+                action: none

@@ -1,0 +1,50 @@
+:root { color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; color: #f0f2f5; background: transparent; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-height: 100vh; background: transparent; }
+main { padding: 12px; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid #edb65f; outline-offset: 3px; }
+.message { background: rgba(17, 22, 29, .96); border: 1px solid #3b4350; border-left: 4px solid #e6af54; border-radius: 10px; padding: 16px 18px 12px; box-shadow: 0 6px 24px #0005; }
+.message.urgent { border-left-color: #fa6b6b; }
+.message-top { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; letter-spacing: .1em; font-weight: 700; color: #e6af54; }
+.message.urgent .message-top { color: #fa8585; }
+#age { color: #98a2af; font-weight: 400; letter-spacing: 0; flex-shrink: 0; }
+#message-text { margin: 12px 0 18px; font-size: clamp(19px, 4.8vw, 26px); line-height: 1.35; font-weight: 500; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message-bottom { display: flex; flex-wrap: wrap; gap: 5px 20px; font-size: 11px; color: #9ca6b4; border-top: 1px solid #ffffff12; padding-top: 10px; }
+.health { align-self: flex-start; display: flex; align-items: center; gap: 7px; background: #11161de8; padding: 6px 9px; border-radius: 6px; font-size: 11px; color: #adb8c6; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #e6af54; flex-shrink: 0; }
+.health.connected { opacity: .6; }
+.health.connected .dot { background: #68c99d; }
+.health.error .dot { background: #fa6b6b; }
+.stale { margin-top: 9px; color: #e6af54; font-size: 11px; }
+.settings-toggle { position: fixed; top: 6px; right: 8px; border: 0; background: #11161dcf; color: #a2adbd; border-radius: 5px; padding: 4px 8px; opacity: .15; font-size: 17px; }
+body:hover .settings-toggle, .settings-toggle:focus-visible { opacity: 1; }
+.settings { background: #11161d; border: 1px solid #303946; border-radius: 12px; padding: 24px; width: min(100%, 460px); align-self: center; margin: auto 0; box-shadow: 0 12px 40px #0006; }
+.settings-heading { display: flex; align-items: center; justify-content: space-between; }
+.eyebrow { color: #e6af54; letter-spacing: .2em; font-size: 10px; font-weight: 700; }
+#close-settings { border: 0; color: #8492a5; font-size: 24px; padding: 0 4px; background: none; }
+h1 { font-size: 27px; margin: 12px 0 5px; font-weight: 600; letter-spacing: -.03em; }
+.intro { color: #9ca6b4; font-size: 13px; margin: 0 0 22px; }
+form > label:not(.checkbox) { display: block; font-size: 11px; color: #c4ccd8; margin: 14px 0 7px; }
+input:not([type=checkbox]) { display: block; width: 100%; background: #0b1016; border: 1px solid #35404f; border-radius: 6px; color: #f0f2f5; padding: 10px; font-size: 12px; }
+.checkbox { margin-top: 15px; display: flex; align-items: center; gap: 7px; font-size: 12px; color: #b1bccb; }
+.checkbox input { accent-color: #edb65f; }
+.hint { font-size: 11px; line-height: 1.5; color: #8593a6; margin: 12px 0 16px; }
+.connect-button { width: 100%; display: flex; justify-content: space-between; background: #e6af54; color: #171c24; border: 0; border-radius: 6px; padding: 11px 12px; font-size: 13px; font-weight: 700; }
+.settings-footer { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
+.settings-footer button { padding: 0; border: 0; background: none; color: #9ca6b4; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.form-error { font-size: 12px; color: #ff9999; }
+@media (max-width: 340px) { main { padding: 8px; } .settings { padding: 16px; } .message { padding: 12px; } #message-text { font-size: 19px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+
+/* Compact racing view: natural message dimensions, independent of the host viewport. */
+body.compact { min-height: 0; }
+.compact main { min-height: 100vh; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.compact .message { width: fit-content; max-width: min(420px, 100%); padding: 10px 14px 12px; border-radius: 8px; box-shadow: none; }
+.compact #message-text { margin: 7px 0 0; font-size: 20px; line-height: 1.35; }
+.compact #age, .compact .message-bottom, .compact .settings-toggle { display: none; }
+.compact .health { align-self: center; width: fit-content; max-width: 100%; margin-top: 4px; }
+.compact .health.connected { display: none; }
+.compact .settings { margin: 8px 0 0; }
